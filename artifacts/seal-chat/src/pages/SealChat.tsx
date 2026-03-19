@@ -23,15 +23,15 @@ const MY_USER_ID = `seal_${Math.random().toString(36).slice(2, 8)}`;
  * label: 表示名
  */
 const AVATAR_COLORS: { label: string; body: string; border: string }[] = [
-  { label: "赤",  body: "#FFB3B3", border: "#D04040" },
-  { label: "橙",  body: "#FFD1A3", border: "#D07820" },
-  { label: "黄",  body: "#FFF0A0", border: "#B8A000" },
-  { label: "緑",  body: "#B3F0C8", border: "#2A9A55" },
+  { label: "赤", body: "#FFB3B3", border: "#D04040" },
+  { label: "橙", body: "#FFD1A3", border: "#D07820" },
+  { label: "黄", body: "#FFF0A0", border: "#B8A000" },
+  { label: "緑", body: "#B3F0C8", border: "#2A9A55" },
   { label: "水色", body: "#B0E4FF", border: "#2288BB" },
-  { label: "青",  body: "#B3C8FF", border: "#2244BB" },
-  { label: "紫",  body: "#D8B3FF", border: "#7722BB" },
-  { label: "白",  body: "#F8F8F8", border: "#AAAAAA" }, // 追加：白
-  { label: "黒",  body: "#555555", border: "#111111" }, // 追加：黒
+  { label: "青", body: "#B3C8FF", border: "#2244BB" },
+  { label: "紫", body: "#D8B3FF", border: "#7722BB" },
+  { label: "白", body: "#F8F8F8", border: "#AAAAAA" }, // 追加：白
+  { label: "黒", body: "#555555", border: "#111111" }, // 追加：黒
 ];
 
 /** 吹き出し1件のデータ型 */
@@ -122,7 +122,7 @@ function LobbyScreen({ onJoin, isFull }: LobbyProps) {
           {/* 名前入力フィールド */}
           <div style={{ marginBottom: "22px", textAlign: "left" }}>
             <label style={{ fontSize: "13px", color: "#666", display: "block", marginBottom: "6px" }}>
-            あなたのお名前
+              あなたのお名前
             </label>
             <input
               type="text"
@@ -328,7 +328,7 @@ function SpeechBubbleStack({ messages }: { messages: ChatMessage[] }) {
               fontSize: "13px",
               color: "#333",
               lineHeight: "1.5", // 行間を少し詰めると複数行でも読みやすくなります
-              
+
               // 横幅の制御
               display: "inline-block", // テキスト量に合わせて幅を決める
               width: "max-content",         //　文字の長さに合わせて横に広がる
@@ -340,7 +340,7 @@ function SpeechBubbleStack({ messages }: { messages: ChatMessage[] }) {
               whiteSpace: "pre-wrap",   // 【重要】端に達したら自動改行し、かつユーザーの改行も反映する
               overflowWrap: "anywhere", // 英数字が続いても枠を突き抜けないように強制改行
               wordBreak: "break-word",  // 単語の途中でも適切に改行
-              
+
               // 影で立体感を出す
               boxShadow: "1px 2px 4px rgba(0,0,0,0.10)",
               // 古いメッセージは薄く表示
@@ -356,10 +356,10 @@ function SpeechBubbleStack({ messages }: { messages: ChatMessage[] }) {
       })}
 
       {/* 吹き出しのしっぽ（小さいまるを2つ並べて「考えてる」風にする） */}
-      <div style={{ 
-        display: "flex", 
-        flexDirection: "column", 
-        alignItems: "center", 
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         marginTop: "1px" // 吹き出し本体との距離
       }}>
         {/* 上のまる（少し大きめ） */}
@@ -370,7 +370,7 @@ function SpeechBubbleStack({ messages }: { messages: ChatMessage[] }) {
           border: "2.5px solid #666",
           borderRadius: "50%",
         }} />
-        
+
       </div>
     </div>
   );
@@ -388,6 +388,10 @@ interface ChatAreaProps {
 }
 
 function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
+  // --- ここから追加 ---
+  const [chatLogs, setChatLogs] = useState<any[]>([]);
+  // ログが開いているかどうかのスイッチ
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
   // 自分のアザラシの位置（画面全体に対する%単位）
   const [myPos, setMyPos] = useState({ x: 40, y: 40 });
   // 自分の吹き出しリスト（最大3件）
@@ -401,8 +405,56 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
   // エラーメッセージ（接続失敗時など）
   const [error, setError] = useState<string | null>(null);
 
+  // --- ページを開いた時に過去のログを読み込み、入室メッセージを送る ---
+  useEffect(() => {
+    const fetchLogs = async () => {
+      // 1. 過去のログを最新20件取得
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (data) setChatLogs(data.reverse());
+
+      // 2. 入室メッセージを保存
+      await supabase.from('messages').insert([{
+        username: myName,
+        content: "が入室しました 🦭",
+        color: myColor.body,
+        type: 'enter'
+      }]);
+    };
+
+    fetchLogs();
+
+    // 3. リアルタイムで新しいメッセージを監視する設定
+    const logChannel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          setChatLogs((prev) => [...prev, payload.new]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(logChannel);
+    };
+  }, []);
+
   // Supabaseチャンネルへの参照（非同期操作で使う）
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // --- 【追加】スクロール位置を制御するための目印 ---
+  const logEndRef = useRef<HTMLDivElement>(null);
+  // ★★★ ここから貼り付け ★★★
+  useEffect(() => {
+    if (isLogsOpen) {
+      logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatLogs, isLogsOpen]);
+  // ★★★ ここまで貼り付け ★★★
+
   // 位置情報のref（gameLoop内で最新値を参照するため）
   const posRef = useRef(myPos);
   // メッセージのref（gameLoop・タイマー内で最新値を参照するため）
@@ -446,7 +498,7 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
       if (key === MY_USER_ID) return;
       setPlayers(prev => {
         const next = new Map(prev);
-        if (newPresences.length > 0) next.set(key, newPresences[0] as PlayerState);
+        if (newPresences.length > 0) next.set(key, (newPresences[0] as any) as PlayerState);
         return next;
       });
     });
@@ -528,11 +580,11 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
       let moved = false;
 
       // 上方向（↑ または W）
-      if (keys.has("ArrowUp")    || keys.has("w") || keys.has("W")) { y = Math.max(MIN_Y, y - SPEED); moved = true; }
+      if (keys.has("ArrowUp") || keys.has("w") || keys.has("W")) { y = Math.max(MIN_Y, y - SPEED); moved = true; }
       // 下方向（↓ または S）
-      if (keys.has("ArrowDown")  || keys.has("s") || keys.has("S")) { y = Math.min(MAX_Y, y + SPEED); moved = true; }
+      if (keys.has("ArrowDown") || keys.has("s") || keys.has("S")) { y = Math.min(MAX_Y, y + SPEED); moved = true; }
       // 左方向（← または A）
-      if (keys.has("ArrowLeft")  || keys.has("a") || keys.has("A")) { x = Math.max(MIN_X, x - SPEED); moved = true; }
+      if (keys.has("ArrowLeft") || keys.has("a") || keys.has("A")) { x = Math.max(MIN_X, x - SPEED); moved = true; }
       // 右方向（→ または D）
       if (keys.has("ArrowRight") || keys.has("d") || keys.has("D")) { x = Math.min(MAX_X, x + SPEED); moved = true; }
 
@@ -554,7 +606,7 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
    * テキスト入力欄にフォーカスがある間は移動キーを無視する。
    */
   useEffect(() => {
-    const MOVE_KEYS = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","w","a","s","d","W","A","S","D"];
+    const MOVE_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"];
     const onKeyDown = (e: KeyboardEvent) => {
       // テキスト入力中は移動キーを無効化
       if (document.activeElement === inputRef.current) return;
@@ -602,6 +654,20 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
   const handleSend = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
+
+    // --- Supabaseにメッセージを保存する ---
+    const { error: dbError } = await supabase.from('messages').insert([{
+      username: myName,
+      content: inputValue.trim(),
+      color: myColor.body,
+      type: 'chat'
+    }]);
+
+    if (dbError) {
+      console.error("送信エラー:", dbError);
+      return;
+    }
+
     const newMsg: ChatMessage = {
       id: `${MY_USER_ID}_${Date.now()}`,
       text: inputValue.trim(),
@@ -621,6 +687,14 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
    * 退室処理：チャンネルから切断してロビー画面に戻る。
    */
   const handleLeave = useCallback(async () => {
+    // 退室メッセージを保存
+    await supabase.from('messages').insert([{
+      username: myName,
+      content: "が退室しました 👋",
+      color: myColor.body,
+      type: 'leave'
+    }]);
+
     if (channelRef.current) {
       // Presenceから自分を削除してから切断
       await channelRef.current.untrack();
@@ -733,12 +807,84 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
           {bgDots.map((d, i) => (
             <circle key={i} cx={`${d.x}%`} cy={`${d.y}%`} r={d.r} fill="#B090D0" opacity={d.opacity} />
           ))}
-          <text x="3%"  y="93%" fontSize="18" opacity="0.22">🐬</text>
+          <text x="3%" y="93%" fontSize="18" opacity="0.22">🐬</text>
           <text x="87%" y="91%" fontSize="22" opacity="0.18">🐙</text>
           <text x="50%" y="95%" fontSize="16" opacity="0.16">🐟</text>
           <text x="13%" y="89%" fontSize="15" opacity="0.16">🐚</text>
           <text x="75%" y="88%" fontSize="17" opacity="0.18"></text>
         </svg>
+
+        {/* ─── 【修正版】上部全域の折りたたみチャットログ ─── */}
+        <div style={{
+          position: "absolute",
+          top: "0",
+          left: "0",
+          right: "0",
+          zIndex: 40,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          pointerEvents: "none", // 隙間をクリックしてもアザラシが動けるように
+        }}>
+          {/* ログ本体（開いている時だけ高さが出る） */}
+          <div style={{
+            width: "100%",
+            maxHeight: isLogsOpen ? "180px" : "0", // スイッチがONなら180px、OFFなら0px
+            overflowY: "auto",
+            background: "rgba(255, 255, 255, 0.7)", // 少し白を強めて読みやすく
+            backdropFilter: "blur(4px)", // 背景をぼかすとおしゃれ
+            transition: "max-height 0.3s ease-in-out, padding 0.3s", // アニメーション
+            borderBottom: isLogsOpen ? "2.5px solid #DCC0F0" : "none",
+            padding: isLogsOpen ? "15px 30px" : "0 30px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+            fontSize: "12px",
+            pointerEvents: "auto", // ログの中はスクロールできるように
+          }}>
+            {chatLogs.length === 0 ? (
+              <div style={{ color: "#999", textAlign: "center" }}>まだログはありません</div>
+            ) : (
+              chatLogs.map((log, i) => (
+                <div key={i} style={{
+                  color: log.type === 'chat' ? "#333" : "#888",
+                  fontStyle: log.type === 'chat' ? "normal" : "italic",
+                  borderBottom: "1px solid rgba(0,0,0,0.03)",
+                  paddingBottom: "2px"
+                }}>
+                  <span style={{ fontWeight: "bold", color: log.color, marginRight: "8px" }}>
+                    {log.username}
+                  </span>
+                  {log.type === 'chat' ? log.content : ` ${log.content}`}
+                </div>
+              ))
+            )}
+            <div ref={logEndRef} />
+          </div>
+
+          {/* 開閉ボタン（タブ） */}
+          <button
+            onClick={() => setIsLogsOpen(!isLogsOpen)}
+            style={{
+              pointerEvents: "auto", // ボタンはクリックできるように
+              background: "rgba(220, 192, 240, 0.9)",
+              border: "none",
+              borderRadius: "0 0 20px 20px",
+              padding: "4px 30px",
+              color: "white",
+              fontSize: "11px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              fontFamily: "inherit",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#B090D0")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(220, 192, 240, 0.9)")}
+          >
+            {isLogsOpen ? "▲ ログを閉じる" : "▼ 過去のログを見る"}
+          </button>
+        </div>
 
         {/* ─── 他プレイヤーのアザラシを描画 ─── */}
         {Array.from(players.values()).map((player) => {

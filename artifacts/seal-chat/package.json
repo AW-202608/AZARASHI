@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "cross-env PORT=5173 BASE_PATH=/ VITE_SUPABASE_URL=https://pmklhappdcldwzwmwqpf.supabase.co VITE_SUPABASE_ANON_KEY=sb_publishable_fZD5muYtbqQ4_XLPZPANvw_8KOsH3Zv vite --config vite.config.ts --host 0.0.0.0",
+    "dev": "cross-env PORT=5173 BASE_PATH=/ vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"

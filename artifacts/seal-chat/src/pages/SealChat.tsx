@@ -95,7 +95,7 @@ function LobbyScreen({ onJoin, isFull }: LobbyProps) {
       }}>
         {/* タイトル */}
         <div style={{ fontSize: "26px", fontWeight: "bold", color: "#7A45AA", marginBottom: "6px" }}>
-          🦭 あざらしチャット 🦭
+          🦭 あざらし広場 🦭
         </div>
         <div style={{ fontSize: "13px", color: "#AAA", marginBottom: "26px" }}>
           あなたのアザラシを設定してね
@@ -122,7 +122,7 @@ function LobbyScreen({ onJoin, isFull }: LobbyProps) {
           {/* 名前入力フィールド */}
           <div style={{ marginBottom: "22px", textAlign: "left" }}>
             <label style={{ fontSize: "13px", color: "#666", display: "block", marginBottom: "6px" }}>
-              🐾 あなたのお名前
+            あなたのお名前
             </label>
             <input
               type="text"
@@ -305,7 +305,7 @@ function SpeechBubbleStack({ messages }: { messages: ChatMessage[] }) {
       gap: "4px",
       zIndex: 20,
       // nowrap の吹き出しが自然な幅を確保できるよう最大幅を明示
-      maxWidth: "300px",
+      maxWidth: "500px",
     }}>
       {/* 古い順（上）から新しい順（下）に表示 */}
       {messages.map((msg, i) => {
@@ -322,27 +322,32 @@ function SpeechBubbleStack({ messages }: { messages: ChatMessage[] }) {
               // 全体的に丸い楕円形（手書き風の温かみ）
               borderRadius: "22px",
               // 上下左右の余白
-              padding: "6px 14px",
+              padding: "8px 16px", // 縦に伸びた時に窮屈にならないよう少し広げました
               // フォント設定
               fontFamily: "'Kosugi Maru', 'Comic Sans MS', 'Hiragino Maru Gothic Pro', cursive",
               fontSize: "13px",
               color: "#333",
-              lineHeight: "1.6",
-              // inline-block でテキスト幅に自然にフィットさせる
-              display: "inline-block",
-              // アザラシの約4倍（72px × 4 ≈ 288px）を最大幅とする
-              maxWidth: "300px",
-              // nowrap で短いテキストは1行に収め、自然な横幅にする
-              // → maxWidth を超えた長文だけ break-word で折り返す
-              whiteSpace: "nowrap",
-              overflowWrap: "break-word",
-              wordBreak: "break-word",
+              lineHeight: "1.5", // 行間を少し詰めると複数行でも読みやすくなります
+              
+              // 横幅の制御
+              display: "inline-block", // テキスト量に合わせて幅を決める
+              width: "max-content",         //　文字の長さに合わせて横に広がる
+              minWidth: "40px",        // 【追加】短すぎても変なので、最低限の幅を確保
+              maxWidth: "220px",       // 【変更】15文字程度の幅。これを超えたら...
+
+              // テキストの折り返し制御
+              // whiteSpace: "nowrap" は「改行禁止」なので削除しました
+              whiteSpace: "pre-wrap",   // 【重要】端に達したら自動改行し、かつユーザーの改行も反映する
+              overflowWrap: "anywhere", // 英数字が続いても枠を突き抜けないように強制改行
+              wordBreak: "break-word",  // 単語の途中でも適切に改行
+              
               // 影で立体感を出す
               boxShadow: "1px 2px 4px rgba(0,0,0,0.10)",
               // 古いメッセージは薄く表示
               opacity: isOldest ? 0.65 : 1,
               transition: "opacity 0.8s ease",
-              textAlign: "center",
+              // 複数行になった際の見栄え
+              textAlign: "left",        // 【お好みで】長文は左寄せの方が見やすいですが、centerでもOKです
             }}
           >
             {msg.text}
@@ -350,18 +355,23 @@ function SpeechBubbleStack({ messages }: { messages: ChatMessage[] }) {
         );
       })}
 
-      {/* 吹き出しの丸い尻尾（SVGで描画、角を尖らせずやわらかく） */}
-      <svg
-        width="20"
-        height="12"
-        viewBox="0 0 20 12"
-        style={{ display: "block", marginTop: "-2px" }}
-      >
-        {/* 楕円形の尻尾：丸く温かいデザイン */}
-        <ellipse cx="8" cy="5" rx="8" ry="5" fill="rgba(255,255,255,0.97)" stroke="#666" strokeWidth="2.5" />
-        {/* 内側の白（ふちどりを隠してなめらかに見せる） */}
-        <ellipse cx="8" cy="4" rx="6" ry="4" fill="rgba(255,255,255,0.97)" stroke="none" />
-      </svg>
+      {/* 吹き出しのしっぽ（小さいまるを2つ並べて「考えてる」風にする） */}
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        alignItems: "center", 
+        marginTop: "1px" // 吹き出し本体との距離
+      }}>
+        {/* 上のまる（少し大きめ） */}
+        <div style={{
+          width: "15px",
+          height: "10px",
+          backgroundColor: "rgba(255, 255, 255, 0.97)",
+          border: "2.5px solid #666",
+          borderRadius: "50%",
+        }} />
+        
+      </div>
     </div>
   );
 }
@@ -723,11 +733,11 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
           {bgDots.map((d, i) => (
             <circle key={i} cx={`${d.x}%`} cy={`${d.y}%`} r={d.r} fill="#B090D0" opacity={d.opacity} />
           ))}
-          <text x="3%"  y="93%" fontSize="18" opacity="0.22">🌸</text>
-          <text x="87%" y="91%" fontSize="22" opacity="0.18">🌿</text>
-          <text x="50%" y="95%" fontSize="16" opacity="0.16">🌼</text>
-          <text x="13%" y="89%" fontSize="15" opacity="0.16">🌷</text>
-          <text x="75%" y="88%" fontSize="17" opacity="0.18">🍀</text>
+          <text x="3%"  y="93%" fontSize="18" opacity="0.22">🐬</text>
+          <text x="87%" y="91%" fontSize="22" opacity="0.18">🐙</text>
+          <text x="50%" y="95%" fontSize="16" opacity="0.16">🐟</text>
+          <text x="13%" y="89%" fontSize="15" opacity="0.16">🐚</text>
+          <text x="75%" y="88%" fontSize="17" opacity="0.18"></text>
         </svg>
 
         {/* ─── 他プレイヤーのアザラシを描画 ─── */}
@@ -828,8 +838,8 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="メッセージを入力してEnter ✍️"
-          maxLength={20}
+          placeholder="メッセージ入力してね"
+          maxLength={140}
           style={{
             flex: 1,
             padding: "9px 16px",
@@ -858,7 +868,7 @@ function ChatArea({ myName, myColorIndex, onLeave }: ChatAreaProps) {
             boxShadow: "0 2px 6px rgba(130,90,220,0.38)",
           }}
         >
-          送信 🐾
+          メッセージ送信
         </button>
       </form>
     </div>

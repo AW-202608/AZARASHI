@@ -1,0 +1,24 @@
+/* グローバルスタイル */
+@import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Kosugi Maru', 'Comic Sans MS', 'Hiragino Maru Gothic Pro', cursive;
+    background: #FFF9F0;
+    color: #333;
+    -webkit-font-smoothing: antialiased;
+  }
+}

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "手書きアザラシ・リアルタイムチャット"
+version = "1.0.0"
+id = "artifacts/seal-chat"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 24008
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/seal-chat run dev"
+
+[services.env]
+PORT = "24008"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/seal-chat", "run", "build"]
+publicDir = "artifacts/seal-chat/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
